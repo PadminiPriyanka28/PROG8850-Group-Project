@@ -8,6 +8,7 @@ on:
 jobs:
   deploy-mysql:
     runs-on: ubuntu-latest
+
     services:
       mysql:
         image: mysql:5.7
@@ -22,6 +23,9 @@ jobs:
     - name: Checkout Code
       uses: actions/checkout@v3
 
+    - name: List project structure (for debugging)
+      run: ls -R
+
     - name: Install Python and Dependencies
       run: |
         sudo apt-get update
@@ -31,20 +35,22 @@ jobs:
     - name: Wait for MySQL to be ready
       run: sleep 30
 
-    - name: Run SQL Scripts
+    - name: Run SQL Scripts (Create Table, Add Column, Seed Data)
       run: |
-        mysql -h 127.0.0.1 -u root -pRoot@1234 -e "SOURCE sql/create_table.sql;"
-        mysql -h 127.0.0.1 -u root -pRoot@1234 -e "SOURCE sql/add_column.sql;"
-        mysql -h 127.0.0.1 -u root -pRoot@1234 -e "SOURCE sql/insert_data.sql;"
+        mysql -h 127.0.0.1 -u root -pRoot@1234 -D project_db -e "SOURCE sql/create_table.sql;"
+        mysql -h 127.0.0.1 -u root -pRoot@1234 -D project_db -e "SOURCE sql/add_column.sql;"
+        mysql -h 127.0.0.1 -u root -pRoot@1234 -D project_db -e "SOURCE sql/insert_data.sql;"
 
-    - name: Run Python Script for Multi Thread Queries
+    - name: Run Python Script for Concurrent Queries
       run: python3 scripts/multi_thread_queries.py
 
     - name: Validate Table and Data
       run: |
-        echo "✅ Showing ClimateData Table Structure:"
-        mysql -h 127.0.0.1 -u root -pRoot@1234 -e "USE project_db; DESCRIBE ClimateData;"
-    
-        echo "✅ Checking Inserted Records:"
-        mysql -h 127.0.0.1 -u root -pRoot@1234 -e "USE project_db; SELECT COUNT(*) FROM ClimateData;"
+        echo "✅ ClimateData Table Structure:"
+        mysql -h 127.0.0.1 -u root -pRoot@1234 -D project_db -e "DESCRIBE ClimateData;"
 
+        echo "✅ Total Records Inserted:"
+        mysql -h 127.0.0.1 -u root -pRoot@1234 -D project_db -e "SELECT COUNT(*) FROM ClimateData;"
+
+        echo "✅ Sample Data:"
+        mysql -h 127.0.0.1 -u root -pRoot@1234 -D project_db -e "SELECT * FROM ClimateData LIMIT 5;"
